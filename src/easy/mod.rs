@@ -11,6 +11,8 @@ mod form;
 mod handle;
 mod handler;
 mod list;
+#[cfg(feature = "websockets_7_86_0")]
+pub mod websockets;
 mod windows;
 
 pub use self::form::{Form, Part};

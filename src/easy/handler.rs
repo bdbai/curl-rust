@@ -14,6 +14,8 @@ use socket2::Socket;
 
 use crate::easy::form;
 use crate::easy::list;
+#[cfg(feature = "websockets_7_86_0")]
+use crate::easy::websockets::{WebsocketFrameMetadata, WebsocketFrameType, WebsocketOptions};
 use crate::easy::windows;
 use crate::easy::{Form, List};
 use crate::panic;
@@ -2110,6 +2112,133 @@ impl<H> Easy2<H> {
     /// `CURLOPT_CONNECT_ONLY`.
     pub fn connect_only(&mut self, enable: bool) -> Result<(), Error> {
         self.setopt_long(curl_sys::CURLOPT_CONNECT_ONLY, enable as c_long)
+    }
+
+    /// If HTTP or WebSocket are used, instruct libcurl to perform the request
+    /// and read all response headers before handing over control to the
+    /// application.
+    ///
+    /// Transfers do not reuse any existing connections and connections are not
+    /// allowed to get reused.
+    ///
+    /// This corresponds to `CURLOPT_CONNECT_ONLY` with value 2.
+    ///
+    /// Added in 7.86.0
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_connect_only(&mut self) -> Result<(), Error> {
+        self.setopt_long(curl_sys::CURLOPT_CONNECT_ONLY, 2)
+    }
+
+    /// Tell libcurl about specific WebSocket behaviors.
+    ///
+    /// This corresponds to `CURLOPT_WS_OPTIONS`.
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_options(&mut self, options: WebsocketOptions) -> Result<(), Error> {
+        self.setopt_long(curl_sys::CURLOPT_WS_OPTIONS, options.to_bitmask() as _)
+    }
+
+    /// Retrieves as much as possible of a received WebSocket frame into buf,
+    /// returning the number of bytes actually stored.
+    ///
+    /// The frame metadata contains information about the received data.
+    ///
+    /// The application must check [`WebsocketFrameMetadata::bytes_left`] to
+    /// determine whether the complete frame has been received. If more payload
+    /// is pending, the application must call this function again with an
+    /// updated buffer to resume receiving. This may for example happen when the
+    /// data does not fit into the provided buffer or when not all frame data
+    /// has been delivered over the network yet.
+    ///
+    /// If the application wants to read the metadata without consuming any
+    /// payload, it may call this function with an empty buffer. Note that
+    /// frames without payload are consumed by this action.
+    ///
+    /// If the received message consists of multiple fragments, the
+    /// [`WebsocketFrameMetadata::is_cont()`] returns `true` in all frames
+    /// except the final one. Appropriate [`WebsocketFrameMetadata::frame_type()`]
+    /// is set in every frame, regardless whether it is the first fragment, an
+    /// intermediate fragment or the final fragment. The application is
+    /// responsible for reassembling fragmented messages. Special care must be
+    /// taken to correctly handle control frames (i.e. CLOSE, PING and PONG)
+    /// arriving in between consecutive fragments of a fragmented TEXT or BINARY
+    /// message. See [`WebsocketFrameMetadata::is_cont()`] for more details.
+    ///
+    /// The WebSocket protocol consists of messages that can be delivered over
+    /// the wire as one or more frames - but since a frame can be too large to
+    /// buffer in memory, libcurl may need to deliver partial frames to the
+    /// application. Fragments, or chunks, of frames.
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_recv<'s>(
+        &'s mut self,
+        buf: &mut [u8],
+    ) -> Result<(usize, &'s WebsocketFrameMetadata), Error> {
+        unsafe {
+            let mut recv: size_t = 0;
+            let mut meta: *const curl_sys::curl_ws_frame = std::ptr::null();
+            self.cvt(curl_sys::curl_ws_recv(
+                self.inner.handle,
+                buf.as_mut_ptr() as *mut _,
+                buf.len(),
+                &mut recv,
+                &mut meta,
+            ))?;
+            Ok((recv, WebsocketFrameMetadata::from_raw(&*meta)))
+        }
+    }
+
+    /// Send the specific message chunk over an established WebSocket
+    /// connection.
+    ///
+    /// The number of payload bytes actually sent is returned. If the operation
+    /// is successful but bytes sent is less than the given buffer, libcurl was
+    /// unable to consume the complete payload in a single call. In this case
+    /// the application must call this function again until all payload is
+    /// processed. buffer must be updated on every following invocation to only
+    /// point to the remaining piece of the payload.
+    ///
+    /// Specify offset when a (huge) frame is being sent using multiple calls
+    /// with partial content per call explicitly.
+    ///
+    /// To send a fragmented message consisting of multiple frames, set
+    /// `chunks_follow` to true in all frames except the final one. The
+    /// appropriate `frame_type`` should be set in every frame of a fragmented
+    /// message without exemption.
+    ///
+    /// If [`WebsocketOptions::raw_mode()`] is enabled, the `frame_type` should
+    /// be set to [`WebsocketFrameType::Raw`].
+    ///
+    /// Warning: while it is possible to invoke this function from a callback,
+    /// such a call is blocking in this situation, e.g. only returns after all
+    /// data has been sent or an error is encountered.
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_send(
+        &mut self,
+        buf: &[u8],
+        frame_type: WebsocketFrameType,
+        offset: Option<usize>,
+        chunks_follow: bool,
+    ) -> Result<usize, Error> {
+        let flags = frame_type.to_flag()
+            | offset.map(|_| curl_sys::CURLWS_OFFSET).unwrap_or(0)
+            | if chunks_follow {
+                curl_sys::CURLWS_CONT
+            } else {
+                0
+            };
+        let frag_size = offset.unwrap_or(0) as curl_sys::curl_off_t;
+
+        unsafe {
+            let mut sent: size_t = 0;
+            self.cvt(curl_sys::curl_ws_send(
+                self.inner.handle,
+                buf.as_ptr() as *const _,
+                buf.len(),
+                &mut sent,
+                frag_size,
+                flags,
+            ))?;
+            Ok(sent)
+        }
     }
 
     // /// Set interface to speak DNS over.

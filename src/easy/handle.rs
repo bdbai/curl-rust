@@ -11,6 +11,8 @@ use libc::c_void;
 use crate::easy::handler::{self, InfoType, ReadError, SeekResult, WriteError};
 use crate::easy::handler::{Auth, NetRc, PostRedirections, ProxyType, SslOpt};
 use crate::easy::handler::{HttpVersion, IpResolve, SslVersion, TimeCondition};
+#[cfg(feature = "websockets_7_86_0")]
+use crate::easy::websockets::{WebsocketFrameMetadata, WebsocketFrameType, WebsocketOptions};
 use crate::easy::{Easy2, Handler};
 use crate::easy::{Form, List};
 use crate::Error;
@@ -1010,6 +1012,40 @@ impl Easy {
     /// Same as [`Easy2::connect_only`](struct.Easy2.html#method.connect_only)
     pub fn connect_only(&mut self, enable: bool) -> Result<(), Error> {
         self.inner.connect_only(enable)
+    }
+
+    /// Same as [`Easy2::websocket_connect_only`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_connect_only(&mut self) -> Result<(), Error> {
+        self.inner.websocket_connect_only()
+    }
+
+    /// Same as [`Easy2::websocket_options`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_options(&mut self, options: WebsocketOptions) -> Result<(), Error> {
+        self.inner.websocket_options(options)
+    }
+
+    /// Same as [`Easy2::websocket_recv`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_recv<'s>(
+        &'s mut self,
+        buf: &mut [u8],
+    ) -> Result<(usize, &'s WebsocketFrameMetadata), Error> {
+        self.inner.websocket_recv(buf)
+    }
+
+    /// Same as [`Easy2::websocket_send`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_send(
+        &mut self,
+        buf: &[u8],
+        frame_type: WebsocketFrameType,
+        offset: Option<usize>,
+        chunks_follow: bool,
+    ) -> Result<usize, Error> {
+        self.inner
+            .websocket_send(buf, frame_type, offset, chunks_follow)
     }
 
     // =========================================================================

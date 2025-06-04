@@ -1174,19 +1174,20 @@ mod websockets {
     pub const CURLOPT_WS_OPTIONS: CURLoption = CURLOPTTYPE_LONG + 320;
 
     // Flags
-    pub const CURLWS_TEXT: c_int = 1 << 0;
-    pub const CURLWS_BINARY: c_int = 1 << 1;
-    pub const CURLWS_CONT: c_int = 1 << 2;
-    pub const CURLWS_CLOSE: c_int = 1 << 3;
-    pub const CURLWS_PING: c_int = 1 << 4;
-    pub const CURLWS_OFFSET: c_int = 1 << 5;
-    pub const CURLWS_PONG: c_int = 1 << 6;
+    pub const CURLWS_TEXT: c_uint = 1 << 0;
+    pub const CURLWS_BINARY: c_uint = 1 << 1;
+    pub const CURLWS_CONT: c_uint = 1 << 2;
+    pub const CURLWS_CLOSE: c_uint = 1 << 3;
+    pub const CURLWS_PING: c_uint = 1 << 4;
+    pub const CURLWS_OFFSET: c_uint = 1 << 5;
+    pub const CURLWS_PONG: c_uint = 1 << 6;
 
     // CURLOPT_WS_OPTIONS bitmask bits
-    pub const CURLWS_RAW_MODE: c_long = 1 << 0;
-    // pub const CURLWS_NOAUTOPONG: c_long = 1 << 1; // Added in 8.14.0
+    pub const CURLWS_RAW_MODE: c_ulong = 1 << 0;
+    // pub const CURLWS_NOAUTOPONG: c_ulong = 1 << 1; // Added in 8.14.0
 
     #[repr(C)]
+    #[derive(Debug, Clone, Copy)]
     pub struct curl_ws_frame {
         pub age: c_int,
         pub flags: c_int,
