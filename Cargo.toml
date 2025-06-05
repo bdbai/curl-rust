@@ -30,6 +30,7 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_
 mio = "0.6"
 mio-extras = "2.0.3"
 anyhow = "1.0.31"
+tungstenite = "0.26.2"
 
 [workspace]
 members = ["systest"]
