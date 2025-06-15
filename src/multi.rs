@@ -11,6 +11,8 @@ use libc::{c_char, c_int, c_long, c_short, c_void};
 #[cfg(unix)]
 use libc::{pollfd, POLLIN, POLLOUT, POLLPRI};
 
+#[cfg(feature = "websockets_7_86_0")]
+use crate::easy::websockets::{WebsocketFrameMetadata, WebsocketFrameType};
 use crate::easy::{Easy, Easy2, List};
 use crate::panic;
 use crate::{Error, MultiError};
@@ -959,6 +961,28 @@ impl EasyHandle {
         self.easy.unpause_write()
     }
 
+    /// Same as [`Easy2::websocket_recv`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_recv<'s>(
+        &'s mut self,
+        buf: &mut [u8],
+    ) -> Result<(usize, &'s WebsocketFrameMetadata), Error> {
+        self.easy.websocket_recv(buf)
+    }
+
+    /// Same as [`Easy2::websocket_send`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_send(
+        &mut self,
+        buf: &[u8],
+        frame_type: WebsocketFrameType,
+        offset: Option<usize>,
+        chunks_follow: bool,
+    ) -> Result<usize, Error> {
+        self.easy
+            .websocket_send(buf, frame_type, offset, chunks_follow)
+    }
+
     /// Get a pointer to the raw underlying CURL handle.
     pub fn raw(&self) -> *mut curl_sys::CURL {
         self.easy.raw()
@@ -1021,6 +1045,28 @@ impl<H> Easy2Handle<H> {
     /// when the writing is later unpaused.
     pub fn unpause_write(&self) -> Result<(), Error> {
         self.easy.unpause_write()
+    }
+
+    /// Same as [`Easy2::websocket_recv`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_recv<'s>(
+        &'s mut self,
+        buf: &mut [u8],
+    ) -> Result<(usize, &'s WebsocketFrameMetadata), Error> {
+        self.easy.websocket_recv(buf)
+    }
+
+    /// Same as [`Easy2::websocket_send`]
+    #[cfg(feature = "websockets_7_86_0")]
+    pub fn websocket_send(
+        &mut self,
+        buf: &[u8],
+        frame_type: WebsocketFrameType,
+        offset: Option<usize>,
+        chunks_follow: bool,
+    ) -> Result<usize, Error> {
+        self.easy
+            .websocket_send(buf, frame_type, offset, chunks_follow)
     }
 
     /// Get a pointer to the raw underlying CURL handle.
